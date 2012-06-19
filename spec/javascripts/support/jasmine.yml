@@ -1,0 +1,34 @@
+src_files:
+  - "vendor/**/*.{js,coffee}"
+  - "lib/**/*.{js,coffee}"
+  - "app/**/*.{js,coffee}"
+
+stylesheets:
+  - "vendor/**/*.css"
+  - "lib/**/*.css"
+  - "app/**/*.css"
+
+helpers:
+  - "helpers/**/*.{js,coffee}"
+
+spec_files:
+  - "**/*[Ss]pec.{js,coffee}"
+
+src_dir: app/assets/javascripts
+
+spec_dir: spec/javascripts
+
+
+#src_files:
+#  - assets/application.js
+
+#stylesheets:
+#  - stylesheets/**/*.css
+
+#spec_files:
+#  - **/*[sS]pec.js
+
+#helpers:
+#  - 'helpers/**/*.nothing'
+
+#spec_dir: spec/javascripts
