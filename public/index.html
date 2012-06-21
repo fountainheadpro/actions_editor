@@ -5,11 +5,18 @@
     <script type="text/javascript" src="assets/application.js"></script>
   </head>
   <body>
-    <div contentEditable='true' interactive=true id="test_editor">
+    <div contentEditable='true' class='test' id="test_editor1">
         <br><br><br>
     </div>
+    <div contentEditable='true' class='test' id="test_editor2">
+        <br><br><br>
+    </div>
+    <div contentEditable='true' class='test' id="test_editor3">
+        <br><br><br>
+    </div>
+
     <script type="text/javascript">
-        $('#test_editor').action_editor()
+        $('.test').action_editor()
     </script>
   </body>
 </html>

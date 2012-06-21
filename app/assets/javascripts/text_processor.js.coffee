@@ -9,13 +9,16 @@ class TextProcessor
   urlPatternMatch=new RegExp()
 
   constructor: () ->
-    c='[a-z][a-z0-9\\-+.]+://'
+    #c='[a-z][a-z0-9\\-+.]+://'
+    c='http?://'
     h='www\\d{0,3}[.]'
     b='[a-z0-9.\\-]+[.][a-z]{2,4}\\/'
     a='\\([^\\s()<>]+\\)'
     f='[^\\s()<>]+'
     e='[^\\s`!()\\[\\]{};:\'".,<>?]'
-    fullregex='\\b('+'(?:'+c+'|'+h+'|'+b+')'+'(?:'+a+'|'+f+')*'+'(?:'+a+'|'+e+')'+')'
+    #fullregex='\\b('+'(?:'+c+'|'+h+'|'+b+')'+'(?:'+a+'|'+f+')*'+'(?:'+a+'|'+e+')'+')'
+    #fullregex='(?:'+c+'|'+h+'|'+b+')'+'(?:'+a+'|'+f+')*'+'(?:'+a+'|'+e+')'
+    fullregex="(?:http?s?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])"
     urlPatternMatch=new RegExp(fullregex, 'gim')
 
   build_image_from_paste: (data) ->
@@ -52,7 +55,7 @@ class TextProcessor
       format(node)
 
   format= (node) ->
-    return node if is_processed(node)
+    #return node if is_processed(node)
     text=$(node).text()
     blocks=text.split(urlPatternMatch)
     length=blocks.length
@@ -93,8 +96,16 @@ class TextProcessor
     node=$(document.createElement('a'))
     node.attr('href',url)
     mark_processed(node)
-    node.html(url)
+    node.html("<img src='/images/icon_waiting.gif'/>")
     wrupper_span.append(node)
+    $.ajax(
+      url: "/proxifier/"+encodeURIComponent(url)
+      success: (data)->
+        $(node).html(data.title)
+      error: (error) ->
+        $(wrupper_span).html(url)
+    )
+
     mark_processed(wrupper_span)
 
   build_image_node = (url) ->
@@ -111,10 +122,11 @@ class TextProcessor
     mark_processed(wrupper_div)
 
   build_text_node = (text) ->
-    if text.trim().length>0
-      node=$(document.createElement('span'))
-      node.text(text)
-      mark_processed(node)
+    #if text.trim().length>0
+    node=$(document.createElement('span'))
+    text.replace('http://', "") if text.endsWith('http://')
+    node.text(text)
+    mark_processed(node)
 
   is_processed = (block) ->
     if _.isString(block)

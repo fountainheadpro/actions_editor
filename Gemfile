@@ -9,6 +9,7 @@ gem 'sqlite3'
 gem 'jasmine', '1.2'
 gem 'jasminerice'
 gem 'headless'
+gem 'mechanize'
 
 # Gems used only for assets and not required
 # in production environments by default.

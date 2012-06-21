@@ -50,6 +50,7 @@
 
     init: ->
       $(@el).on("paste", @format)
+      #$(@el).on("keyup", @format)
       #$(@el).bind("paste", @format).pasteEvents()
 
 
