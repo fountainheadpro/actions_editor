@@ -9,23 +9,26 @@ class TextProcessor
   urlPatternMatch=new RegExp()
 
   constructor: () ->
-    #c='[a-z][a-z0-9\\-+.]+://'
-    c='http?://'
+    c='[a-z][a-z0-9\\-+.]+://'
+    #c='http?://'
     h='www\\d{0,3}[.]'
     b='[a-z0-9.\\-]+[.][a-z]{2,4}\\/'
     a='\\([^\\s()<>]+\\)'
     f='[^\\s()<>]+'
     e='[^\\s`!()\\[\\]{};:\'".,<>?]'
-    #fullregex='\\b('+'(?:'+c+'|'+h+'|'+b+')'+'(?:'+a+'|'+f+')*'+'(?:'+a+'|'+e+')'+')'
+    fullregex='\\b('+'(?:'+c+'|'+h+'|'+b+')'+'(?:'+a+'|'+f+')*'+'(?:'+a+'|'+e+')'+')'
     #fullregex='(?:'+c+'|'+h+'|'+b+')'+'(?:'+a+'|'+f+')*'+'(?:'+a+'|'+e+')'
-    fullregex="(?:http?s?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])"
+    #fullregex="(?:http?s?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])"
     urlPatternMatch=new RegExp(fullregex, 'gim')
 
   build_image_from_paste: (data) ->
     build_image_node(data)
 
   re_format: (node) ->
-    re_format_internal(node)
+    re_format_internal(node) if node?
+
+  #re_format_paste: (pasteData) ->
+
 
   is_ready_for_processing_text: (node, text) ->
     if $(node).html().indexOf(text) > 0
@@ -49,32 +52,26 @@ class TextProcessor
           re_format_internal(child)
         )
     else
-      return if is_processed(node)
-      $(node).removeAttr('style')
-      $(node).removeAttr('class')
+      #return if is_processed(node)
       format(node)
 
   format= (node) ->
-    #return node if is_processed(node)
     text=$(node).text()
-    blocks=text.split(urlPatternMatch)
+    #avoid formatting empty text nodes
+    return node if text.trim().length==0
+    blocks=_.compact(text.split(urlPatternMatch))
     length=blocks.length
-    i=0
+    #avoid formatting processed node
+    return node if length==1 && is_processed(node)
     _.each(blocks,
       (block) ->
-        i=i+1
-        unless (i==length and !is_url(block))
-          $(node).before(process_block(block))
-        else
-          $(node).after(process_block(block))
+        $(node).before(process_block(block))
     )
     $(node).remove()
 
   process_block = (block) ->
     return null if (is_processed(block) or _.isEmpty(block))
     return block unless _.isString(block)
-    if is_image(block)
-      return build_image_node (block)
     if is_url(block)
       return build_url_node(block)
     return build_text_node(block)
@@ -93,52 +90,60 @@ class TextProcessor
 
   build_url_node = (url) ->
     wrupper_span=$(document.createElement('span'))
-    node=$(document.createElement('a'))
-    node.attr('href',url)
-    mark_processed(node)
-    node.html("<img src='/images/icon_waiting.gif'/>")
-    wrupper_span.append(node)
+    wrupper_span.html("<img src='/images/icon_waiting.gif'/>")
+    node=wrupper_span.children(":first")
     $.ajax(
       url: "/proxifier/"+encodeURIComponent(url)
       success: (data)->
-        $(node).html(data.title)
+        if data.type=='link'
+          link=$(document.createElement('a'))
+          link.attr('href',url)
+          mark_processed(link)
+          $(link).html(data.title)
+          replace_node(node, link)
+        if data.type=='image'
+          replace_node($(node), build_image_node(url))
+        if data.type=='error'
+          replace_node($(node), build_text_node(url))
       error: (error) ->
-        $(wrupper_span).html(url)
+        replace_node(wrupper_span, build_text_node(url))
     )
-
     mark_processed(wrupper_span)
+
+  replace_node = (node, processed_node) ->
+    return unless processed_node?
+    #have to do it this way to keep the cursor in the right place.
+    $(node).before(processed_node)
+    $(node).remove()
 
   build_image_node = (url) ->
     wrupper_div=$(document.createElement('div'))
     img=$(document.createElement('img'))
     img.attr('src',url)
-    img.on('error',
-      ->
-        original_url=$(@).attr('src')
-        replace_node(@, build_text_node(original_url) )
-    )
+    img.attr('max-width','100%')
+    img.attr('max-height','100%')
+    #img.on('error',
+    #  ->
+    #    original_url=$(@).attr('src')
+    #    replace_node($(@).parent(), build_text_node(original_url))
+    #)
     mark_processed(img)
     wrupper_div.append(img)
     mark_processed(wrupper_div)
 
   build_text_node = (text) ->
-    #if text.trim().length>0
     node=$(document.createElement('span'))
-    text.replace('http://', "") if text.endsWith('http://')
+    #text.replace('http://', "") if text.endsWith('http://')
     node.text(text)
     mark_processed(node)
 
-  is_processed = (block) ->
-    if _.isString(block)
-     node=$(document.createElement('span'))
-     node.html(block)
-     rv=false
-     rv=is_processed(node.children()[0]) if node.children()[0]
-     node.remove()
-     rv
+  is_processed = (node) ->
+    #node is processed if it's the only one text node in the processed span
+    if node.nodeType == 3 && node.parentNode.childNodes.length==1
+      return is_processed(node.parentNode)
     else
-      if block && block.getAttribute?
-        block.getAttribute('_action')=='1'
+      if node && node.getAttribute?
+        node.getAttribute('_action')=='1'
       else
         false
 
@@ -146,6 +151,7 @@ class TextProcessor
     $(block).attr('_action',1)
     block
 
+  #to-do need to figure out the right way of processing html pastes
   clean_up = (html) ->
     rv=""
     if html?
@@ -165,10 +171,5 @@ class TextProcessor
     hidden_div.remove() if hidden_div?
     text
 
-  replace_node = (node, processed_node) ->
-    return unless processed_node?
-    #have to do it this way to keep the cursor in the right place.
-    $(node).before(processed_node)
-    $(node).remove()
 
 @.TextProcessor=TextProcessor

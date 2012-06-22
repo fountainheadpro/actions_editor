@@ -4,17 +4,9 @@ class PasteParser
 
   handlepaste: (elem, e) ->
     pasteData=build_paste_data(e)
-    pasteData.waiting_attempts=20
+    pasteData.is_ready=false
     waitforpastedata elem, pasteData if pasteData?
     true
-
-    #if e.preventDefault
-    # e.stopPropagation()
-    # e.preventDefault()
-    # false
-    #else
-    # waitforpastedata elem, pasteData
-    # true
 
 
   build_paste_data = (e) ->
@@ -26,39 +18,42 @@ class PasteParser
      type: "text"
     cbd=e.originalEvent.clipboardData if e and e.originalEvent.clipboardData
     if cbd && cbd.getData
-     if /text\/plain/.test(e.originalEvent.clipboardData.types)
-      pasteData.data = e.originalEvent.clipboardData.getData("text/plain")
-      pasteData.type='text'
-     else if /text\/html/.test(e.originalEvent.clipboardData.types)
-      pasteData.data = e.originalEvent.clipboardData.getData("text/html")
-      pasteData.type='html'
+     if  /text\/html/.test(e.originalEvent.clipboardData.types)
+       pasteData.data = e.originalEvent.clipboardData.getData("text/html")
+       pasteData.type='html'
+     else if /text\/plain/.test(e.originalEvent.clipboardData.types)
+       pasteData.data = e.originalEvent.clipboardData.getData("text/plain")
+       pasteData.type='text'
      else if /Files/.test(e.originalEvent.clipboardData.types)  && imageFilter.test(cbd.items[0].type)
       reader=new FileReader()
       reader.readAsDataURL(e.originalEvent.clipboardData.items[0].getAsFile())
-      pasteData.type='img_url'
+      pasteData.type='image'
       reader.onloadend=
        (event)->
         pasteData.data=event.target.result
     pasteData
 
   waitforpastedata = (elem, pasteData) ->
-    if  pasteData.waiting_attempts<20 && pasteData.data.length>0
+    if  pasteData.is_ready && pasteData.data.length>0
       tp=new TextProcessor()
-      if (pasteData.type=='text' or pasteData.type=='html')
-        tp.re_format(elem)
-      else
+      if (pasteData.type=='text')
+        if pasteData.focusElement.nodeType==3
+          new_text_element=pasteData.focusElement.splitText(pasteData.focusOffset)
+          new_text_element.splitText(pasteData.data.length)
+        tp.re_format(pasteData.focusElement.parentNode)
+      if (pasteData.type=='html')
+        tp.re_format(pasteData.focusElement.parentNode)
+      if (pasteData.type=='image')
         new_node=tp.build_image_from_paste(pasteData.data)
         processpaste(elem, pasteData, new_node)
     else
-     #if pasteData.focusElement.nodeType==3
-     # pasteData.focusElement.splitText(pasteData.focusOffset)
-     if pasteData.waiting_attempts>0
+     unless pasteData.is_ready
        that =
         e: elem
         s: pasteData
        that.callself = ->
         waitforpastedata that.e, that.s
-       pasteData.waiting_attempts=pasteData.waiting_attempts-1
+       pasteData.is_ready=true
        setTimeout that.callself, 20
 
   processpaste = (elem, pasteData, new_node) ->
@@ -67,10 +62,12 @@ class PasteParser
     if fe==elem
       $(elem).append($(new_node))
     else if fe.nodeType==3
-      newTextElement=pasteData.focusElement.splitText(pasteData.focusOffset)
-      $(newTextElement).selectionStart=$(newTextElement).selectionEnd=1
-      $(parent).insertAfter(newTextElement)
+      pasteData.focusElement.splitText(pasteData.focusOffset)
+      if fe.nextSibling?
+        $(fe.nextSibling).before(new_node)
+      else
+        parent.appendChild(new_node)
     else
-      $(fe).after(new_node)
+      $(fe).before(new_node)
 
 window.PasteParser = PasteParser

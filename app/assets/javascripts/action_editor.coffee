@@ -18,23 +18,6 @@
   defaults =
     property: 'value'
 
-  #introducing paste events following this:
-  #
-  $.fn.pasteEvents = (delay) ->
-    delay = 20 unless delay
-    $(@).each(
-     ->
-      $(@).bind("paste",
-      ->
-       $(@).trigger("pre_paste")
-       $el=$(@)
-       setTimeout(
-        ->
-         $el.trigger("post_paste")
-        , delay))
-    )
-
-
   # The actual plugin constructor
   class Plugin
     constructor: (@el, options) ->
@@ -49,12 +32,15 @@
       @init()
 
     init: ->
-      $(@el).on("paste", @format)
-      #$(@el).on("keyup", @format)
+      $(@el).on("paste", format)
+      $(@el).on("keyup focus", handle_key_up)
       #$(@el).bind("paste", @format).pasteEvents()
 
+    handle_key_up = (e) ->
+      tp=new TextProcessor()
+      tp.re_format(@)
 
-    format: (e)->
+    format= (e)->
       pp=new PasteParser()
       pp.handlepaste(@,e)
       #for node in @childNodes
