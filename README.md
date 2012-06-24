@@ -6,6 +6,7 @@ intuitive wysiwyg wiki editor focused on social sharing and publishing.
 Version 0.1:
 
 Supports the following features:
+
 1. Link processing.
 After user paste or types a url, the url is converted to the page link with the page title.
 Backend component currently uses mechanize gem to extract title by link.
