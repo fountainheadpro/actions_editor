@@ -22,7 +22,11 @@ class TextProcessor
     urlPatternMatch=new RegExp(fullregex, 'gim')
 
   build_image_from_paste: (data) ->
-    build_image_node(data)
+    img=build_image_node(data)
+    $(img.children().first()).on('image_uploaded',
+      (e)->
+        $(e.target).attr('src', e.link)
+    )
 
   re_format: (node) ->
     re_format_internal(node) if node?
@@ -52,7 +56,6 @@ class TextProcessor
           re_format_internal(child)
         )
     else
-      #return if is_processed(node)
       format(node)
 
   format= (node) ->
@@ -98,11 +101,12 @@ class TextProcessor
         if data.type=='link'
           link=$(document.createElement('a'))
           link.attr('href',url)
+          link.attr('target','_blank')
           mark_processed(link)
           $(link).html(data.title)
           replace_node(node, link)
         if data.type=='image'
-          replace_node($(node), build_image_node(url))
+          replace_node($(node), build_image_node(data.url))
         if data.type=='error'
           replace_node($(node), build_text_node(url))
       error: (error) ->
@@ -122,11 +126,6 @@ class TextProcessor
     img.attr('src',url)
     img.attr('max-width','100%')
     img.attr('max-height','100%')
-    #img.on('error',
-    #  ->
-    #    original_url=$(@).attr('src')
-    #    replace_node($(@).parent(), build_text_node(original_url))
-    #)
     mark_processed(img)
     wrupper_div.append(img)
     mark_processed(wrupper_div)

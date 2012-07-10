@@ -10,6 +10,8 @@ gem 'jasmine', '1.2'
 gem 'jasminerice'
 gem 'headless'
 gem 'mechanize'
+gem 'fog'
+gem 'uuid'
 
 # Gems used only for assets and not required
 # in production environments by default.

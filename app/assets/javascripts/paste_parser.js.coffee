@@ -28,9 +28,12 @@ class PasteParser
       reader=new FileReader()
       reader.readAsDataURL(e.originalEvent.clipboardData.items[0].getAsFile())
       pasteData.type='image'
+      pasteData.original_type= e.originalEvent.clipboardData.items[0].type
       reader.onloadend=
        (event)->
-        pasteData.data=event.target.result
+         pasteData.original_data=event.target.result
+         build_image_from_paste(pasteData)
+
     pasteData
 
   waitforpastedata = (elem, pasteData) ->
@@ -40,11 +43,12 @@ class PasteParser
         if pasteData.focusElement.nodeType==3
           new_text_element=pasteData.focusElement.splitText(pasteData.focusOffset)
           new_text_element.splitText(pasteData.data.length)
-        tp.re_format(pasteData.focusElement.parentNode)
+        tp.re_format(pasteData.focusElement)
       if (pasteData.type=='html')
-        tp.re_format(pasteData.focusElement.parentNode)
+        tp.re_format(pasteData.focusElement)
       if (pasteData.type=='image')
         new_node=tp.build_image_from_paste(pasteData.data)
+        pasteData.img_node=$(new_node).children().first()
         processpaste(elem, pasteData, new_node)
     else
      unless pasteData.is_ready
@@ -53,7 +57,7 @@ class PasteParser
         s: pasteData
        that.callself = ->
         waitforpastedata that.e, that.s
-       pasteData.is_ready=true
+       pasteData.is_ready=true unless pasteData.type=='image'
        setTimeout that.callself, 20
 
   processpaste = (elem, pasteData, new_node) ->
@@ -69,5 +73,21 @@ class PasteParser
         parent.appendChild(new_node)
     else
       $(fe).before(new_node)
+
+  build_image_from_paste = (pasteData) ->
+    paste_image_info =
+      'data': pasteData.original_data
+      'type': pasteData.original_type
+      'key' : 'my_super_image.png'
+    $.ajax(
+          url: "/proxifier/"
+          type: 'POST'
+          data: paste_image_info
+          success: (data)->
+            pasteData.data=data.url
+            pasteData.is_ready=true
+          error: (error) ->
+            console.log (error)
+        )
 
 window.PasteParser = PasteParser

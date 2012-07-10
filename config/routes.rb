@@ -4,7 +4,9 @@ ActionsEditor::Application.routes.draw do
 
 
   # Sample of regular route:
-     match 'proxifier/:url' => 'action_url#show', :constraints => { :url => /.*/ }
+  match 'proxifier/:url' => 'action_url#show', :constraints => { :url => /.*/ }, :via => [:get]
+  match 'proxifier' => 'action_url#create',  :via => [:post]
+
   # Keep in mind you can assign values other than :controller and :action
 
   # Sample of named route:

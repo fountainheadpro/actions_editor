@@ -28,29 +28,47 @@
       @options = $.extend {}, defaults, options
       @_defaults = defaults
       @_name = pluginName
-
       @init()
 
     init: ->
       $(@el).on("paste", format)
-      $(@el).on("keyup focus", handle_key_up)
-      #$(@el).bind("paste", @format).pasteEvents()
+      $(@el).on("keyup", handle_key_up)
 
-    handle_key_up = (e) ->
-      tp=new TextProcessor()
-      tp.re_format(@)
+
+    handle_key_up=  (e) ->
+
+      event_map={}
+      event_map[$.ui.keyCode.DOWN] = "jump_down"
+      event_map[$.ui.keyCode.UP] = "jump_up"
+
+      memorize_position= ()=>
+        $(@).data('selection_offset',window.getSelection().anchorOffset)
+        $(@).data('selection_node',window.getSelection().anchorNode)
+        #console.log "memorized_selection:"+$(@).data('selection_offset')
+
+      position_not_changed= ()=>
+          selection_offset =  $(@).data('selection_offset')
+          selection_node =  $(@).data('selection_node')
+          #console.log "same position:"+selection_offset
+          rv = selection_offset? && selection_node? && (selection_node is window.getSelection().anchorNode) &&
+          (selection_offset == window.getSelection().anchorOffset)
+          #console.log 'same postion:'+rv
+          return rv
+
+      if _.has(event_map,event.keyCode)
+        if  position_not_changed()
+          e.preventDefault()
+          $(@).trigger(event_map[event.keyCode])
+        else
+          memorize_position()
+      return
 
     format= (e)->
       pp=new PasteParser()
       pp.handlepaste(@,e)
-      #for node in @childNodes
-      #  do (node)->
-      #    pp.format(node) #if node && node.nodeType==3
 
 
 
-  # A really lightweight plugin wrapper around the constructor,
-  # preventing against multiple instantiations
   $.fn[pluginName] = (options) ->
     @each ->
       if !$.data(this, "plugin_#{pluginName}")
